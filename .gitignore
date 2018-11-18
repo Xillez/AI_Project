@@ -551,3 +551,6 @@ ASALocalRun/
 .localhistory/
 
 # End of https://www.gitignore.io/api/linux,python,windows,sublimetext,visualstudio,visualstudiocode
+
+# Test Videos
+data/test/
