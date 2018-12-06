@@ -49,7 +49,7 @@ def performCommands():
         #elif sys.argv[i] in ("<arg_option_1>", "<arg_option_2>"):
         #    action
 
-class SensoryStage:
+class FirstStage:
     def run(self, payload):
         global cap
         global lower_skin
@@ -124,8 +124,8 @@ def main():
         #global face_cascade
         #face_cascade = cv2.CascadeClassifier("./cascades/haarcascade_frontalface_default.xml")
 
-        # Run sensory stage
-        sensoryStage = SensoryStage()
+        # Run first stage
+        sensoryStage = FirstStage()
         sensoryStage.run(payload)
 
         # If any faces, highlight and crop to first face found
