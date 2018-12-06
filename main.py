@@ -22,8 +22,7 @@ face_cascade = None
 
 wd = ""
 
-grayscaleInput = False
-index = 0
+inputLoc = 0
 
 def programSetup():
     performCommands()
@@ -35,15 +34,18 @@ def programSetup():
 def performCommands():
     # TODO:
     # - Maybe add save location option?
+
+    global inputLoc
+
     for i in range(0, len(sys.argv)):
-        if sys.argv[i] in ("-g", "--gray"):
-            global grayscaleInput
-            grayscaleInput = True
-        elif sys.argv[i] in ("-c", "--cwd"):
+        if sys.argv[i] in ("-c", "--cwd"):
             if os.path.isdir(sys.argv[i + 1]):
                 os.chdir(sys.argv[i + 1])
             else:
                 print("Couldn't find the specified directory! Defaulting to launch directory!")
+        elif sys.argv[i] in ("-i", "--input"):
+            if (sys.argv[i + 1] != ""):
+                inputLoc = sys.argv[i + 1]
         #elif sys.argv[i] in ("<arg_option_1>", "<arg_option_2>"):
         #    action
 
@@ -55,7 +57,7 @@ class SensoryStage:
 
         frame = cv2.cvtColor(payload["current_frame"], cv2.COLOR_BGR2HSV) # Save local frame converted to HSV
 
-        frame = cv2.GaussianBlur(frame, (3, 3), 1, 1)           # Blur to help remove som noise
+        frame = cv2.GaussianBlur(frame, (3, 3), 1, 1)           # Blur to help remove some noise
 
         skinMask = cv2.inRange(frame, lower_skin, upper_skin)   # Find every pixel in skin color range
 
@@ -64,7 +66,7 @@ class SensoryStage:
         #skinMask = cv2.erode(skinMask, kernel, iterations = 2)
         #skinMask = cv2.dilate(skinMask, kernel, iterations = 2)
 
-        skinMask = cv2.medianBlur(skinMask, 5)  # Blur for a little more noise removal
+        skinMask = cv2.medianBlur(skinMask, 5)  # Blur a little more for noise removal
 
         payload["skin_mask"] = skinMask         # Update current skinmask
 
@@ -98,12 +100,14 @@ def main():
     programSetup()
 
     global cap
+    #global inputLoc
     # Load an color image in grayscale
-    cap = cv2.VideoCapture("./videos/fobi.mp4")
+    cap = cv2.VideoCapture(inputLoc)
+    #cap = cv2.VideoCapture("./videos/fobi.mp4")
     #cap = cv2.VideoCapture(0)
 
     # Video capturing stream open
-    while cap.isOpened():
+    while True:
         # Capture frame by frame
         ret, frame = cap.read()
 
@@ -114,7 +118,7 @@ def main():
                 payload["prev_frame"] = payload["current_frame"]        # Set current frame to prev
             payload["current_frame"] = copy.deepcopy(frame)             # Update current frame
         else:       # Invalid image, start video over, change to be next video in line!
-            cap = cv2.VideoCapture("./videos/fobi.mp4")
+            cap = cv2.VideoCapture(inputLoc)
             continue
 
         #global face_cascade
