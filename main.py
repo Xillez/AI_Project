@@ -1,3 +1,4 @@
+from utils import detector_utils as detector_utils
 import copy
 import os
 import sys
@@ -19,10 +20,13 @@ upper_skin = np.array([20, 255, 255])
 #upper_blue = np.array([240, 95, 85])
 
 face_cascade = None
+hand_cascade = None
 
 wd = ""
 
 inputLoc = 0
+
+detection_graph, sess = detector_utils.load_inference_graph()
 
 def programSetup():
     performCommands()
@@ -44,7 +48,10 @@ def performCommands():
             else:
                 print("Couldn't find the specified directory! Defaulting to launch directory!")
         elif sys.argv[i] in ("-i", "--input"):
-            if (sys.argv[i + 1] != ""):
+            if sys.argv[i + 1] != "":
+                if sys.argv[i + 1].isdigit():
+                    inputLoc = int(sys.argv[i + 1])
+                    continue
                 inputLoc = sys.argv[i + 1]
         #elif sys.argv[i] in ("<arg_option_1>", "<arg_option_2>"):
         #    action
@@ -70,6 +77,18 @@ class FirstStage:
 
         payload["skin_mask"] = skinMask         # Update current skinmask
 
+class HandDetectionStage:
+    def run(self, payload):
+        global cap
+
+        boxes, scores = detector_utils.detect_objects(payload["current_frame"],
+                                                      detection_graph, sess)
+
+        # draw bounding boxes on frame
+        detector_utils.draw_box_on_image(2, 0.2,
+                                         scores, boxes, cap.get(3), cap.get(4),
+                                         payload["current_frame"])
+
 def displayFrames(titles, frames):
         # Error handling, not all frames assigned colors
         if len(frames) != len(titles):
@@ -80,15 +99,15 @@ def displayFrames(titles, frames):
         for i, frame in enumerate(frames):
             cv2.imshow(titles[i], frame)
 
-#def drawFace(facepos, frames, colors = []):
-#        # Error handling, not all faces assigned colors
-#        if len(frames) != len(colors) and len(colors) != 0:
-#            print("(len(frames) == len(colors) or len(colors) == 0) not satistfied!")
-#            return      # Exit
-#
-#        # Make rectangle in every frame
-#        for i, frame in enumerate(frames):
-#            frame = cv2.rectangle(frame, (facepos[0], facepos[1]),(facepos[0] + facepos[2], facepos[1] + facepos[3]), colors[i] if len(colors) == len(frames) else (255, 255, 255))
+def drawFace(facepos, frames, colors = []):
+        # Error handling, not all faces assigned colors
+        if len(frames) != len(colors) and len(colors) != 0:
+            print("(len(frames) == len(colors) or len(colors) == 0) not satistfied!")
+            return      # Exit
+
+        # Make rectangle in every frame
+        for i, frame in enumerate(frames):
+            frame = cv2.rectangle(frame, (facepos[0], facepos[1]),(facepos[0] + facepos[2], facepos[1] + facepos[3]), colors[i] if len(colors) == len(frames) else (255, 255, 255))
 #
 #def cropToFace(facepos, frame):
 #    return cv2.getRectSubPix(frame, (facepos[2], facepos[3]),(facepos[0] + (facepos[2] / 2.0), facepos[1] + (facepos[3] / 2.0)))
@@ -102,9 +121,13 @@ def main():
     global cap
     #global inputLoc
     # Load an color image in grayscale
-    cap = cv2.VideoCapture(inputLoc)
-    #cap = cv2.VideoCapture("./videos/fobi.mp4")
+    #cap = cv2.VideoCapture(inputLoc)
+    cap = cv2.VideoCapture("./videos/fobi.mp4")
     #cap = cv2.VideoCapture(0)
+
+    #global face_cascade
+    #face_cascade = cv2.CascadeClassifier("./cascades/haarcascade_frontalface_default.xml")
+    #hand_cascade = cv2.CascadeClassifier("./cascades/aGest.xml")
 
     # Video capturing stream open
     while True:
@@ -118,15 +141,22 @@ def main():
                 payload["prev_frame"] = payload["current_frame"]        # Set current frame to prev
             payload["current_frame"] = copy.deepcopy(frame)             # Update current frame
         else:       # Invalid image, start video over, change to be next video in line!
-            cap = cv2.VideoCapture(inputLoc)
+            cap = cv2.VideoCapture("./videos/fobi.mp4")
             continue
-
-        #global face_cascade
-        #face_cascade = cv2.CascadeClassifier("./cascades/haarcascade_frontalface_default.xml")
 
         # Run first stage
         sensoryStage = FirstStage()
         sensoryStage.run(payload)
+        hand = HandDetectionStage()
+        hand.run(payload)
+
+        #grayframe = cv2.cvtColor(payload["current_frame"], cv2.COLOR_BGR2GRAY)
+        #hands = hand_cascade.detectMultiScale(grayframe, 1.5, 5)
+
+        #if len(hands) > 0:
+        #    self.drawFace(hands[0], [grayframe])# , [(0, 255, 0), (255, 0, 0), (255, 255, 255)])
+
+        #cv2.imshow("hands", grayframe)
 
         # If any faces, highlight and crop to first face found
         #if len(faces) > 0:
